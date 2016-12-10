@@ -9,14 +9,17 @@ def BlackScholesGamma(S,K,r,div,T,sigma):
     
 def BlackScholesVega(S, K, r, div, T, sigma):
     d2 = (np.log(S / K) + (r - div - sigma * sigma * 0.5) * T)/( sigma * np.sqrt(T))
-    vega = K * exp(-r*T)*norm.pdf(d2)*sqrt(T)
-    return vega
+    BS_Vega = K * exp(-r*T)*norm.pdf(d2)*sqrt(T)
+    return BS_Vega
     
 def BlackScholesDelta(S,K,R,Div,T,sigma):
     d1 = ((np.log(S/K)) + (R - Div + (sigma^2)/2) * T)/sigma*(sqrt(T))
-    Delta = np.exp(-Div*T)*norm.cdf(d1)
-    return Delta
+    BS_Delta = np.exp(-Div*T)*norm.cdf(d1)
+    return BS_Delta
     
+
+    
+
     
     
     
