@@ -17,7 +17,28 @@ def BlackScholesDelta(S,K,R,Div,T,sigma):
     BS_Delta = np.exp(-Div*T)*norm.cdf(d1)
     return BS_Delta
     
-
+def Lookback_Option_Pricer(engine, option, data):
+    expiry = option.expiry
+    strike = option.strike
+    (spot, rate, volatility, dividend) = data.get_data()
+    steps = engine.steps
+    discount_rate = np.exp(-rate * expiry)
+    delta_t = expiry
+    z = np.random.normal(size = steps)
+    
+    nudt = (rate - 0.5 * volatility * volatility) * delta_t
+    sidt = volatility * np.sqrt(delta_t)    
+    
+    spot_t = np.zeros((steps, ))
+    payoff_t = np.zeros((steps, ))
+    
+    for i in range(steps):
+        spot_t[i] = spot * nudt + sidt * z[i]
+        payoff_t[i] = option.payoff(spot_t[i])
+        
+    price = discount_rate * payoff_t.max()   
+    
+    return price
     
 
     
