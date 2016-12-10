@@ -9,12 +9,12 @@ def BlackScholesGamma(S,K,r,div,T,sigma):
     
 def BlackScholesVega(S, K, r, div, T, sigma):
     d2 = (np.log(S / K) + (r - div - sigma * sigma * 0.5) * T)/( sigma * np.sqrt(T))
-    BS_Vega = K * exp(-r*T)*norm.pdf(d2)*sqrt(T)
+    BS_Vega = K * exp(-r*T)*norm.pdf(d2)*np.sqrt(T)
     return BS_Vega
     
-def BlackScholesDelta(S,K,R,Div,T,sigma):
-    d1 = ((np.log(S/K)) + (R - Div + (sigma^2)/2) * T)/sigma*(sqrt(T))
-    BS_Delta = np.exp(-Div*T)*norm.cdf(d1)
+def BlackScholesDelta(S,K,r,div,T,sigma):
+    d1 = ((np.log(S/K)) + (r - div + (sigma*sigma)/2) * T)/sigma*(np.sqrt(T))
+    BS_Delta = np.exp(-div*T)*norm.cdf(d1)
     return BS_Delta
     
 def Lookback_Option_Pricer(engine, option, data):
@@ -36,11 +36,75 @@ def Lookback_Option_Pricer(engine, option, data):
         spot_t[i] = spot * nudt + sidt * z[i]
         payoff_t[i] = option.payoff(spot_t[i])
         
-    price = discount_rate * payoff_t.max()   
+    price = discount_rate * payoff_t.max() 
     
     return price
-    
+   
 
+def ControlVariateMC(K, T, S, sigma, r, div, alpha, Vbar, xi, N, M):
     
+    dt=1/xi
+    sig2 = sigma*sigma
+    alphadt=alpha*dt
+    xisdt = xi * np.sqrt(dt)
+    sdt = np.sqrt(dt)
+    erddt = exp((r-div)*dt)
+    egam1 = exp(2*(r-div)*dt)
+    egam2 = -2*erddt+1
+    eveg1 = exp(-alpha*dt)
+    eveg2 = Vbar - Vbar*eveg1
     
+    sum_CT = 0
+    sum_CT2 = 0
     
+    beta1 = 1
+    beta2 = 1
+    beta3 = 1
+    
+    for j in range(N): #for each simulation
+        St1 = S
+        Vt = sig2
+        maxSt1 = S
+        cv1 = 0
+        cv2 = 0
+        cv3 = 0
+        
+        for i in range(xi*T): #for each time step
+            t = (i-1) * dt
+            delta1=BlackScholesDelta(S,K,r,div,t,sigma)
+            gamma1=BlackScholesGamma(S,K,r,div,t,sigma)
+            vega1=BlackScholesVega(S,K,r,div,t,sigma)
+            
+            
+            ####### Evolve variance ######
+            e = np.random.normal(0,1)
+            Vtn = Vt + alphadt * (Vbar-Vt) + xisdt * sigma * e
+            
+            ####### evolve asset price #######
+            e = np.random.normal(0,1)
+            Stn1 = St1 * exp((r-div-.5*Vt)*dt + sigma * sdt * e)
+            
+    
+            ####### Accumulate Control variates #####
+            cv1 = cv1 + delta1 * (Stn1-St1*erddt)
+            cv2 = cv2 + gamma1 * ((Stn1-St1)*(Stn1-St1)-St1*St1*(egam1*exp(Vt*dt)+egam2))
+            cv3 = cv3 + vega1 * ((Vtn-Vt)-(Vt*eveg1+eveg2-Vt))
+            
+            Vt = Vtn
+            St1 = Stn1
+            
+            if(St1 > maxSt1):
+                maxSt1 = St1
+                
+        CT = max(0, maxSt1-K) + beta1*cv1 + beta2*cv2 + beta3*cv3
+        
+        sum_CT = sum_CT + CT
+        sum_CT2 = sum_CT2 + CT * CT
+    
+    call_value = sum_CT/M*exp(-r*T)
+    SD = sqrt((sum_CT2 - sum_CT*sum_CT/M)* exp(-2*r*T)/(M-1))
+    SE = SD/sqrt(M)
+    
+    return(call_value, SD, SE)    
+
+ControlVariateMC(100, 1, 100, .2, .06, .03, 5, .02, 52, 1000, 17.729)
