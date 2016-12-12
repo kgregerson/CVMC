@@ -90,6 +90,9 @@ class ExoticPayoff(Payoff):
     @strike.setter
     def strike(self, new_strike):
         self.__strike = new_strike
+        
+    def payoff(self, spot):
+        return self.__payoff(self, spot)
 
 
 def call_payoff(option, spot):
